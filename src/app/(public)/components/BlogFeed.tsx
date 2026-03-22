@@ -5,11 +5,11 @@ import { createClient } from "@/utils/supabase/client";
 import { Heart, Share2 } from "lucide-react";
 import Image from "next/image";
 
-export default function BlogFeed({ initialPosts }: { initialPosts: any[] }) {
+export default function BlogFeed({ initialPosts, filterTag }: { initialPosts: any[], filterTag?: string }) {
   const [posts, setPosts] = useState(initialPosts.filter(p => p.priority >= 0 && !p.category?.includes('[HIDDEN]') && !p.tags?.some((t: string) => t.includes('[HIDDEN]'))));
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(initialPosts.length === 5);
+  const [hasMore, setHasMore] = useState(initialPosts.length >= 5);
   const loader = useRef(null);
   const supabase = createClient();
 
@@ -20,10 +20,16 @@ export default function BlogFeed({ initialPosts }: { initialPosts: any[] }) {
     const from = page * 5;
     const to = from + 5 - 1;
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('posts')
       .select('*')
-      .gte('priority', 0)
+      .gte('priority', 0);
+
+    if (filterTag) {
+      query = query.contains('tags', [filterTag]);
+    }
+
+    const { data, error } = await query
       .order('priority', { ascending: false })
       .order('created_at', { ascending: false })
       .range(from, to);
@@ -76,6 +82,7 @@ export default function BlogFeed({ initialPosts }: { initialPosts: any[] }) {
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/!\[(.*?)\]\((.*?)\)/g, '') // Hide images in feed snippet
+      .replace(/\[center\]([\s\S]*?)\[\/center\]/g, '<div style="text-align: center;">$1</div>')
       .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="content-link">$1</a>')
       .split(/\n+/)
       .map(para => {
@@ -92,11 +99,20 @@ export default function BlogFeed({ initialPosts }: { initialPosts: any[] }) {
           <header className="feed-post-header">
             <div className="meta-overline">
               <span className="cat-chip">{post.category}</span>
+              {post.tags && post.tags.slice(0, 3).map((tag: string) => (
+                <a href={`/tag/${tag}`} key={tag} className="tag-link-mini">#{tag}</a>
+              ))}
               <span className="dot">•</span>
               <span className="date-text">{new Date(post.created_at).toLocaleDateString('vi-VN')}</span>
+              {post.likes_count > 0 && (
+                <>
+                  <span className="dot">•</span>
+                  <span className="likes-badge"><Heart size={12} fill="#ef4444" color="#ef4444" strokeWidth={3} /> {post.likes_count}</span>
+                </>
+              )}
             </div>
-            <h2 className="feed-post-title">
-              <a href={`/${post.slug}`}>{post.title}</a>
+            <h2 className="feed-post-title" style={post.title.includes('[center]') ? {textAlign: 'center'} : {}}>
+              <a href={`/${post.slug}`}>{post.title.replace(/\[\/?center\]/g, '')}</a>
             </h2>
           </header>
 
@@ -136,7 +152,10 @@ export default function BlogFeed({ initialPosts }: { initialPosts: any[] }) {
         .feed-post-item { margin-bottom: 10rem; }
         .meta-overline { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: #888; }
         .cat-chip { background: #000; color: #fff; padding: 0.2rem 0.6rem; border-radius: 2rem; font-size: 0.6rem; }
+        .tag-link-mini { color: #9333ea; opacity: 0.6; text-decoration: none; font-size: 0.65rem; transition: opacity 0.2s; }
+        .tag-link-mini:hover { opacity: 1; }
         .dot { opacity: 0.3; margin: 0 0.2rem; }
+        .likes-badge { display: flex; align-items: center; gap: 0.35rem; color: #ef4444; font-weight: 800; font-size: 0.7rem; }
         
         .feed-post-title { font-size: 2.75rem; font-weight: 900; letter-spacing: -0.04em; line-height: 1.1; margin-bottom: 2rem; }
         .feed-post-title a { text-decoration: none; color: inherit; transition: opacity 0.2s; }

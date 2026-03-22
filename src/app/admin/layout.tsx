@@ -9,9 +9,9 @@ import {
   User,
   Bell,
   Search,
-  ChevronRight,
-  Tags
-} from "lucide-react";
+   Tags,
+   Sparkles
+ } from "lucide-react";
 
 export default function AdminLayout({
   children,
@@ -40,6 +40,7 @@ export default function AdminLayout({
                 <NavItem href="/admin" icon={<LayoutDashboard size={18} />} label="Bảng điều khiển" />
                 <NavItem href="/admin/posts" icon={<FileText size={18} />} label="Quản lý bài viết" />
                 <NavItem href="/admin/taxonomies" icon={<Tags size={18} />} label="Danh mục & Tags" />
+                <NavItem href="/admin/seo" icon={<Sparkles size={18} />} label="Tối ưu SEO" />
               </ul>
             </div>
 

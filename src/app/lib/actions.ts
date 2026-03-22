@@ -40,6 +40,11 @@ export async function createPost(formData: FormData) {
   const rawTags = formData.get('tags') as string || '';
   const tags = rawTags ? rawTags.split(',').map(tag => tag.trim()).filter(Boolean) : []
   
+  const seoTitle = formData.get('seoTitle') as string || ''
+  const seoDescription = formData.get('seoDescription') as string || ''
+  const imageAlt = formData.get('imageAlt') as string || title || ''
+  const seoOgImage = formData.get('seoOgImage') as string || ''
+  
   let imageUrl = '';
   try {
     imageUrl = await uploadImageIfPresent(supabase, formData);
@@ -59,6 +64,10 @@ export async function createPost(formData: FormData) {
         priority,
         tags, 
         image_url: imageUrl,
+        seo_title: seoTitle,
+        seo_description: seoDescription,
+        image_alt: imageAlt,
+        seo_og_image: seoOgImage,
         created_at: new Date().toISOString()
       }
     ])
@@ -87,6 +96,11 @@ export async function updatePost(id: string, formData: FormData) {
   const rawTags = formData.get('tags') as string || '';
   const tags = rawTags ? rawTags.split(',').map(tag => tag.trim()).filter(Boolean) : []
   
+  const seoTitle = formData.get('seoTitle') as string || ''
+  const seoDescription = formData.get('seoDescription') as string || ''
+  const imageAlt = formData.get('imageAlt') as string || title || ''
+  const seoOgImage = formData.get('seoOgImage') as string || ''
+  
   let imageUrl = formData.get('imageUrl') as string;
   try {
     const uploadedUrl = await uploadImageIfPresent(supabase, formData);
@@ -105,7 +119,11 @@ export async function updatePost(id: string, formData: FormData) {
       category, 
       priority,
       tags, 
-      image_url: imageUrl
+      image_url: imageUrl,
+      seo_title: seoTitle,
+      seo_description: seoDescription,
+      image_alt: imageAlt,
+      seo_og_image: seoOgImage
     })
     .eq('id', id)
 

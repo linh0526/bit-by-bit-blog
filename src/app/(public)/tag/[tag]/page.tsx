@@ -1,24 +1,32 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-import BlogFeed from "./components/BlogFeed";
-import Sidebar from "./components/Sidebar";
+import BlogFeed from "../../components/BlogFeed";
+import Sidebar from "../../components/Sidebar";
 
-export default async function Home() {
+export default async function TagPage({
+  params,
+}: {
+  params: Promise<{ tag: string }>;
+}) {
+  const { tag } = await params;
+  const decodedTag = decodeURIComponent(tag);
+  
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-  // Fetch initial 5 posts for the feed
+  // Fetch initial posts filtered by tag
   const { data: initialPosts } = await supabase
     .from('posts')
     .select('*')
+    .contains('tags', [decodedTag])
     .not('category', 'ilike', '[HIDDEN]%')
     .gte('priority', 0)
     .order('priority', { ascending: false })
     .order('created_at', { ascending: false })
-    .limit(10); 
+    .limit(10);
 
-  // Fetch latest posts for right sidebar
+  // Fetch latest posts for right sidebar (unfiltered)
   const { data: latestPosts } = await supabase
     .from('posts')
     .select('id, title, slug, created_at, category, image_url, likes_count')
@@ -35,30 +43,30 @@ export default async function Home() {
     .eq('key', 'total_views')
     .single();
 
-  // Fetch unique tags from all posts
-  const { data: tagPosts } = await supabase.from('posts').select('tags').not('category', 'ilike', '[HIDDEN]%');
-  const allTags = Array.from(new Set(tagPosts?.flatMap(p => p.tags || []) || []));
-
   return (
     <div className="home-page-root blog-style-layout">
       <div className="three-column-layout">
         
-        {/* LEFT COLUMN: Hidden on Home Page */}
+        {/* LEFT COLUMN: Hidden on Tag Page */}
         <aside className="sidebar-column left-sidebar hidden-on-home">
            <div className="sticky-content-toc"></div>
         </aside>
- 
+
         {/* CENTER COLUMN: Blog Feed */}
         <main className="article-column feed-column animate-in">
-          <BlogFeed initialPosts={initialPosts || []} />
+          <header className="tag-header">
+            <h1 className="tag-page-title">
+              Tag: <span className="tag-name">#{decodedTag}</span>
+            </h1>
+          </header>
+          <BlogFeed initialPosts={initialPosts || []} filterTag={decodedTag} />
         </main>
- 
+
         {/* RIGHT COLUMN: Sidebar with widgets */}
         <Sidebar 
           latestPosts={latestPosts || []} 
           supabaseUrl={supabaseUrl} 
           totalViews={statsData?.value} 
-          allTags={allTags}
         />
 
       </div>
@@ -83,16 +91,16 @@ export default async function Home() {
 
         .article-column { padding: 3rem 4.5rem; max-width: 900px; margin: 0 auto; width: 100%; }
         
+        .tag-header { margin-bottom: 5rem; border-bottom: 1px solid #eee; padding-bottom: 2rem; }
+        .tag-page-title { font-size: 2.5rem; font-weight: 900; letter-spacing: -0.05em; margin-bottom: 0.5rem; color: #888; }
+        .tag-name { color: #000; }
+        .tag-result-count { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: #bbb; letter-spacing: 0.1em; }
+
         .animated-in { animation: fadeIn 0.8s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-in { animation: fadeIn 0.8s ease-out forwards; }
 
         @media (max-width: 1400px) { .three-column-layout { grid-template-columns: 1fr 300px; } }
-        @media (max-width: 1024px) {
-          .three-column-layout { grid-template-columns: 1fr; }
-          .sidebar-column { display: none; }
-          .feed-column { padding: 2rem 1.5rem; border-left: none; }
-        }
         @media (max-width: 1100px) {
           .three-column-layout { grid-template-columns: 1fr; }
           .article-column { padding: 4rem 2rem; }

@@ -1,4 +1,6 @@
+import { Search } from "lucide-react";
 import React from "react";
+import UserStatus from "./components/UserStatus";
 
 export default function PublicLayout({
   children,
@@ -27,11 +29,12 @@ export default function PublicLayout({
               <input 
                 type="text" 
                 name="q" 
-                placeholder="Tìm bài viết..." 
+                placeholder="Tìm..." 
                 className="header-search-input"
               />
-              <button type="submit" className="search-btn-icon">🔍</button>
+              <button type="submit" className="search-btn-icon"><Search size={16} /></button>
             </form>
+            <UserStatus />
           </div>
         </nav>
       </header>
@@ -74,6 +77,8 @@ export default function PublicLayout({
           display: flex; 
           justify-content: flex-end; 
           padding-right: 2.5rem; 
+          gap: 1.5rem;
+          align-items: center;
         }
 
         .logo {

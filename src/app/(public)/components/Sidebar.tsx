@@ -1,27 +1,34 @@
 import React from "react";
 import Image from "next/image";
-import { TrendingUp, Clock, BarChart3, Instagram, Github, Mail, Facebook } from "lucide-react";
+import { TrendingUp, Clock, BarChart3, Instagram, Github, Mail, Facebook, Heart } from "lucide-react";
+import BlogStats from "./BlogStats";
 
 interface SidebarProps {
   latestPosts?: any[];
   supabaseUrl?: string;
   isAboutPage?: boolean;
+  totalViews?: number;
+  postSlug?: string;
+  allTags?: string[];
 }
 
-export default function Sidebar({ latestPosts, supabaseUrl, isAboutPage }: SidebarProps) {
+export default function Sidebar({ latestPosts, supabaseUrl, isAboutPage, totalViews, postSlug, allTags }: SidebarProps) {
   const profileImageUrl = supabaseUrl 
     ? `${supabaseUrl}/storage/v1/object/public/images/1774099534011-p4ncl14qqu.png`
     : "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&h=200&auto=format&fit=crop";
 
   return (
-    <aside className="sidebar-column-white-scroll right-sidebar animate-in-right">
+    <aside className="sidebar-column-white-scroll right-sidebar">
       <div className="sidebar-flow-content">
         {/* Top Posts */}
         {latestPosts && latestPosts.length > 0 && (
           <div className="sidebar-widget">
-            <h3 className="widget-label-dark"><TrendingUp size={14} /> TOP POSTS</h3>
+            <h3 className="widget-label-dark">TOP POSTS</h3>
             <div className="related-mini-list-dark">
-              {latestPosts.slice(0, 3).map((lp: any, idx: number) => (
+              {[...latestPosts]
+                .sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0))
+                .slice(0, 3)
+                .map((lp: any, idx: number) => (
                 <a key={idx} href={`/${lp.slug}`} className="related-card-mini-dark">
                   {lp.image_url && (
                     <div className="mini-thumb-rounded">
@@ -35,7 +42,13 @@ export default function Sidebar({ latestPosts, supabaseUrl, isAboutPage }: Sideb
                     </div>
                   )}
                   <div className="mini-content-col">
-                    <span className="mini-title-dark">{lp.title}</span>
+                    <span className="mini-title-dark">{lp.title.replace(/\[\/?center\]/g, '')}</span>
+                    {lp.likes_count > 0 && (
+                      <div className="stat-row">
+                        <Heart size={10} fill="#ef4444" color="#ef4444" />
+                        <span className="stat-count">{lp.likes_count}</span>
+                      </div>
+                    )}
                   </div>
                 </a>
               ))}
@@ -46,7 +59,7 @@ export default function Sidebar({ latestPosts, supabaseUrl, isAboutPage }: Sideb
         {/* Latest Posts */}
         {latestPosts && latestPosts.length > 0 && (
           <div className="sidebar-widget">
-            <h3 className="widget-label-dark"><Clock size={14} /> MỚI NHẤT</h3>
+            <h3 className="widget-label-dark"> MỚI NHẤT</h3>
             <div className="related-mini-list-dark">
               {latestPosts.map((lp: any) => (
                 <a key={lp.slug} href={`/${lp.slug}`} className="related-card-mini-dark">
@@ -61,7 +74,7 @@ export default function Sidebar({ latestPosts, supabaseUrl, isAboutPage }: Sideb
                       />
                     </div>
                   )}
-                  <span className="mini-title-dark">{lp.title}</span>
+                  <span className="mini-title-dark">{lp.title.replace(/\[\/?center\]/g, '')}</span>
                 </a>
               ))}
             </div>
@@ -110,23 +123,49 @@ export default function Sidebar({ latestPosts, supabaseUrl, isAboutPage }: Sideb
 
         {/* BLOG STATS */}
         <div className="sidebar-widget">
-          <h3 className="widget-label-dark"><BarChart3 size={16} /> BLOG STATS</h3>
-          <div className="stats-box-minimal">
-            <div className="stat-value">14,449,271</div>
-            <div className="stat-label">tổng lượt xem bài viết</div>
+          <div className="stats-header-minimal">
+            <h3 className="widget-label-dark" style={{marginBottom: 0}}>BLOG STATS</h3>
+            <BlogStats initialViews={totalViews} postSlug={postSlug} />
           </div>
         </div>
+
+        {/* TAG CLOUD */}
+        {allTags && allTags.length > 0 && (
+          <div className="sidebar-widget">
+             <h3 className="widget-label-dark">ALL TAGS</h3>
+             <div className="tag-cloud-container">
+                {allTags.map((tag, i) => {
+                  const sizes = ['0.7rem', '0.85rem', '1.1rem', '0.65rem', '1.25rem'];
+                  const size = sizes[i % sizes.length];
+                  return (
+                    <a 
+                      key={tag} 
+                      href={`/tag/${tag}`} 
+                      className="tag-cloud-link"
+                      style={{ fontSize: size }}
+                    >
+                      #{tag}
+                    </a>
+                  );
+                })}
+             </div>
+          </div>
+        )}
       </div>
-      
+
       <style dangerouslySetInnerHTML={{ __html: `
         .sidebar-column-white-scroll {
           background-color: #ffffff;
-          padding: 6rem 1.5rem;
+          padding: 3rem 1.5rem;
           border-left: 1px solid #f0f0f0;
         }
+        .tag-cloud-container { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: baseline; }
+        .tag-cloud-link { color: #888; text-decoration: none; font-weight: 800; transition: all 0.2s; letter-spacing: 0.02em; }
+        .tag-cloud-link:hover { color: #9333ea; transform: translateY(-2px); }
         .sidebar-flow-content { display: flex; flex-direction: column; }
-        .widget-label-dark { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.2rem; color: #aaa; margin-bottom: 1.25rem; text-transform: uppercase; display: flex; align-items: center; gap: 0.5rem; }
-        .sidebar-widget { margin-bottom: 4rem; }
+        .sidebar-widget { margin-bottom: 5rem; }
+        .stats-header-minimal { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1.5rem; border-bottom: 1px solid #f0f0f0; padding-bottom: 0.5rem; }
+        .widget-label-dark { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.2rem; margin-bottom: 1.25rem; text-transform: uppercase; display: flex; align-items: center; gap: 0.5rem; }
         
         .related-mini-list-dark { display: flex; flex-direction: column; gap: 1.25rem; }
         .related-card-mini-dark { display: flex; gap: 1rem; text-decoration: none; color: inherit; align-items: flex-start; }
@@ -134,6 +173,8 @@ export default function Sidebar({ latestPosts, supabaseUrl, isAboutPage }: Sideb
         .mini-content-col { display: flex; flex-direction: column; justify-content: start; gap: 0.2rem; }
         .mini-title-dark { font-size: 0.8rem; font-weight: 700; line-height: 1.35; color: #1a1a1a; transition: color 0.2s; }
         .related-card-mini-dark:hover .mini-title-dark { color: #9333ea; }
+        .stat-row { display: flex; align-items: center; gap: 0.25rem; }
+        .stat-count { font-size: 0.65rem; font-weight: 700; color: #ef4444; }
         
         /* About Me Refined (Premium Box restored) */
         .about-me-premium-box { background: #fafafa; padding: 1.5rem; border-radius: 1rem; border: 1px solid #f0f0f0; }

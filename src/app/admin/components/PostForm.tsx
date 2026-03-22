@@ -43,6 +43,7 @@ export default function PostForm({ initialData, isEdit }: PostFormProps) {
   const generateSlug = (title: string) => {
     const s = title
       .toLowerCase()
+      .replace(/\[\/?center\]/gi, '')
       .trim()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -80,7 +81,7 @@ export default function PostForm({ initialData, isEdit }: PostFormProps) {
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; border-radius: 1rem; display: block;" />')
-      .replace(/\[center\](.*?)\[\/center\]/g, '<div style="text-align: center;">$1</div>')
+      .replace(/\[center\]([\s\S]*?)\[\/center\]/g, '<div style="text-align: center;">$1</div>')
       .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" style="color: #9333ea; text-decoration: underline;">$1</a>')
       .replace(/^\s*-\s+(.*)/gm, '<li style="margin-left: 1.5rem;">$1</li>')
       .split(/\n+/)
@@ -286,6 +287,34 @@ export default function PostForm({ initialData, isEdit }: PostFormProps) {
                     <img src={imageUrl} alt="Preview" className="img-preview" />
                   </div>
                 ) : null}
+              </div>
+            </div>
+
+            <div className="sidebar-card seo-card">
+              <h3 className="sidebar-title"><Sparkles size={20} /> SEO & Social</h3>
+              
+              <div className="config-item">
+                <label className="config-label">SEO Title</label>
+                <input name="seoTitle" type="text" defaultValue={initialData?.seo_title} placeholder="Tiêu đề hiển thị trên Google..." className="config-input" />
+                <p className="input-hint">Mặc định sẽ lấy tiêu đề bài viết nếu để trống.</p>
+              </div>
+
+              <div className="config-item">
+                <label className="config-label">SEO Description</label>
+                <textarea name="seoDescription" defaultValue={initialData?.seo_description} placeholder="Mô tả cho công cụ tìm kiếm..." className="config-input" style={{ minHeight: '80px', resize: 'vertical' }} />
+                <p className="input-hint">Mô tả ngắn gọn nội dung bài viết (dưới 160 ký tự).</p>
+              </div>
+
+              <div className="config-item">
+                <label className="config-label">Image Alt Text (SEO Ảnh)</label>
+                <input name="imageAlt" type="text" defaultValue={initialData?.image_alt} placeholder="Mô tả nội dung ảnh..." className="config-input" />
+                <p className="input-hint">Giúp Google hiểu nội dung ảnh và hỗ trợ người khiếm thị.</p>
+              </div>
+
+              <div className="config-item">
+                <label className="config-label">OG Image URL (Social Share)</label>
+                <input name="seoOgImage" type="text" defaultValue={initialData?.seo_og_image} placeholder="Link ảnh khi chia sẻ lên MXH..." className="config-input" />
+                <p className="input-hint">Nếu trống, sẽ sử dụng ảnh bìa bài viết.</p>
               </div>
             </div>
 
