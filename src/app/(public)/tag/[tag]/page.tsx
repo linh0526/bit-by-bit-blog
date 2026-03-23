@@ -32,9 +32,21 @@ export default async function TagPage({
     .select('id, title, slug, created_at, category, image_url, likes_count')
     .not('category', 'ilike', '[HIDDEN]%')
     .gte('priority', 0)
-    .order('priority', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(5);
+
+  // Fetch top posts by hearts
+  const { data: topPosts } = await supabase
+    .from('posts')
+    .select('id, title, slug, created_at, category, image_url, likes_count')
+    .not('category', 'ilike', '[HIDDEN]%')
+    .gte('priority', 0)
+    .order('likes_count', { ascending: false })
+    .limit(3);
+
+  // Fetch unique tags from all posts
+  const { data: tagPosts } = await supabase.from('posts').select('tags').not('category', 'ilike', '[HIDDEN]%');
+  const allTags = Array.from(new Set(tagPosts?.flatMap(p => p.tags || []) || []));
 
   // Fetch total views for the site
   const { data: statsData } = await supabase
@@ -65,8 +77,10 @@ export default async function TagPage({
         {/* RIGHT COLUMN: Sidebar with widgets */}
         <Sidebar 
           latestPosts={latestPosts || []} 
+          topPosts={topPosts || []}
           supabaseUrl={supabaseUrl} 
           totalViews={statsData?.value} 
+          allTags={allTags}
         />
 
       </div>

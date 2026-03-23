@@ -61,18 +61,6 @@ export default async function AdminDashboard() {
         <MetricCard label="Số người dùng" value={userCount.toString()} trend="Đã đăng ký" trendUp={true} icon={<User size={20} />} color="green" />
       </div>
 
-      {/* SEO Tip Banner (Horizontal) */}
-      <div className="seo-tip-banner glass-morph">
-        <div className="tip-content">
-          <div className="tip-icon"><Sparkles size={24} /></div>
-          <div className="tip-text">
-            <h3>Mẹo SEO hôm nay</h3>
-            <p>Hãy thử thêm các từ khoá về <strong>'Công nghệ'</strong> vào đoạn tóm tắt để tăng tỉ lệ hiển thị trên Google.</p>
-          </div>
-        </div>
-        <a href="/admin/seo" className="tip-btn">Quản lý SEO <ChevronRight size={14} /></a>
-      </div>
-
       {/* Single Column Layout for Widgets */}
       <div className="overview-widgets-single">
           <div className="w-card">

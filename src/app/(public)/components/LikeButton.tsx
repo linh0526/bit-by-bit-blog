@@ -19,6 +19,15 @@ export default function LikeButton({ postId, initialLikes }: LikeButtonProps) {
     const fetchUserAndStatus = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+
+      // Fetch actual like count to ensure syncing with DB
+      const { count } = await supabase
+        .from("post_likes")
+        .select("*", { count: 'exact', head: true })
+        .eq("post_id", postId);
+      
+      if (count !== null) setLikes(count);
+
       if (user) {
         // Check if user already liked this post
         const { data } = await supabase
@@ -64,13 +73,11 @@ export default function LikeButton({ postId, initialLikes }: LikeButtonProps) {
           .eq("user_id", user.id);
         
         if (!error) {
-          setLikes(prev => Math.max(0, prev - 1));
+          const newLikes = Math.max(0, likes - 1);
+          setLikes(newLikes);
           setIsLiked(false);
-          // Update denormalized count (manually if no trigger)
-          await supabase
-            .from('posts')
-            .update({ likes_count: Math.max(0, likes - 1) })
-            .eq('id', postId);
+          // Try to update denormalized count (best effort)
+          await supabase.from('posts').update({ likes_count: newLikes }).eq('id', postId);
         }
       } else {
         // Like
@@ -79,13 +86,11 @@ export default function LikeButton({ postId, initialLikes }: LikeButtonProps) {
           .insert({ post_id: postId, user_id: user.id });
         
         if (!error) {
-          setLikes(prev => prev + 1);
+          const newLikes = likes + 1;
+          setLikes(newLikes);
           setIsLiked(true);
-          // Update denormalized count
-          await supabase
-            .from('posts')
-            .update({ likes_count: likes + 1 })
-            .eq('id', postId);
+          // Try to update denormalized count (best effort)
+          await supabase.from('posts').update({ likes_count: newLikes }).eq('id', postId);
         }
       }
     } catch (err) {

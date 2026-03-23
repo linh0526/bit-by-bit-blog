@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import Sidebar from "../components/Sidebar";
 import CommentSection from "../components/CommentSection";
 import PostInteractions from "../components/PostInteractions";
+import Link from "next/link";
 import { Metadata } from "next";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -79,9 +80,17 @@ export default async function BlogPostPage({
     .select('id, title, slug, created_at, category, image_url, likes_count')
     .not('category', 'ilike', '[HIDDEN]%')
     .gte('priority', 0)
-    .order('priority', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(5);
+
+  // Fetch top posts by hearts
+  const { data: topPosts } = await supabase
+    .from('posts')
+    .select('id, title, slug, created_at, category, image_url, likes_count')
+    .not('category', 'ilike', '[HIDDEN]%')
+    .gte('priority', 0)
+    .order('likes_count', { ascending: false })
+    .limit(3);
 
   // 5. Fetch total views for the site
   const { data: statsData } = await supabase
@@ -173,7 +182,7 @@ export default async function BlogPostPage({
               <div className="article-footer-tags">
                 <span className="tags-label">Tags:</span>
                 {post.tags.map((tag: string) => (
-                  <a href={`/tag/${tag}`} key={tag} className="tag-chip-outline">#{tag}</a>
+                  <Link href={`/tag/${tag}`} key={tag} className="tag-chip-outline">#{tag}</Link>
                 ))}
               </div>
             )}
@@ -191,7 +200,7 @@ export default async function BlogPostPage({
                 <h3 className="section-title">BÀI VIẾT TƯƠNG TỰ</h3>
                 <div className="related-grid">
                   {relatedPosts.map((rp: any) => (
-                    <a href={`/${rp.slug}`} key={rp.id} className="related-card">
+                    <Link href={`/${rp.slug}`} key={rp.id} className="related-card">
                       {rp.image_url && (
                         <div className="related-img-container">
                           <img src={rp.image_url} alt={rp.title} />
@@ -205,7 +214,7 @@ export default async function BlogPostPage({
                         </div>
                         <h4 className="related-title">{rp.title.replace(/\[\/?center\]/g, '')}</h4>
                       </div>
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -215,9 +224,10 @@ export default async function BlogPostPage({
           </div>
         </main>
 
-        {/* RIGHT COLUMN: Shared Sidebar Component */}
+        {/* RIGHT COLUMN: Sidebar with widgets */}
         <Sidebar 
           latestPosts={latestPosts || []} 
+          topPosts={topPosts || []}
           supabaseUrl={supabaseUrl} 
           isAboutPage={slug === 'about'} 
           totalViews={statsData?.value} 
@@ -311,19 +321,25 @@ export default async function BlogPostPage({
           .sidebar-column { display: none; }
           .article-column { padding: 2rem 1.5rem; max-width: 100%; border-left: none; }
           .article-title { font-size: 2.25rem; }
+          .markdown-body { font-size: 1.15rem; line-height: 1.7; }
+          .markdown-body h2 { font-size: 1.75rem; border-left-width: 3px; padding-left: 1rem; margin: 3rem 0 1.25rem; }
+          .markdown-body h3 { font-size: 1.4rem; }
+          .article-excerpt-lead { font-size: 1.15rem; padding-left: 1rem; margin-bottom: 2rem; }
           .post-hero-image img { border-radius: 0; }
           .hero-container { margin: 0; padding: 0; }
           .related-grid { grid-template-columns: 1fr; gap: 2.5rem; }
         }
 
         @media (max-width: 768px) {
+          .article-title { font-size: 1.75rem; }
           .post-interactions-row { flex-direction: column; align-items: stretch; gap: 1rem; }
           .like-btn, .share-btn-minimal { justify-content: center; width: 100%; }
         }
+
         @media (max-width: 1100px) {
           .three-column-layout { grid-template-columns: 1fr; }
           .left-sidebar { display: none; }
-          .article-column { padding: 4rem 2rem; }
+          .article-column { padding: 4rem 1.5rem; }
         }
       `}} />
     </div>

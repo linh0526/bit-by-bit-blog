@@ -2,9 +2,11 @@ import React from "react";
 import Image from "next/image";
 import { TrendingUp, Clock, BarChart3, Instagram, Github, Mail, Facebook, Heart } from "lucide-react";
 import BlogStats from "./BlogStats";
+import Link from "next/link";
 
 interface SidebarProps {
   latestPosts?: any[];
+  topPosts?: any[];
   supabaseUrl?: string;
   isAboutPage?: boolean;
   totalViews?: number;
@@ -12,7 +14,7 @@ interface SidebarProps {
   allTags?: string[];
 }
 
-export default function Sidebar({ latestPosts, supabaseUrl, isAboutPage, totalViews, postSlug, allTags }: SidebarProps) {
+export default function Sidebar({ latestPosts, topPosts, supabaseUrl, isAboutPage, totalViews, postSlug, allTags }: SidebarProps) {
   const profileImageUrl = supabaseUrl 
     ? `${supabaseUrl}/storage/v1/object/public/images/1774099534011-p4ncl14qqu.png`
     : "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&h=200&auto=format&fit=crop";
@@ -21,15 +23,12 @@ export default function Sidebar({ latestPosts, supabaseUrl, isAboutPage, totalVi
     <aside className="sidebar-column-white-scroll right-sidebar">
       <div className="sidebar-flow-content">
         {/* Top Posts */}
-        {latestPosts && latestPosts.length > 0 && (
+        {topPosts && topPosts.length > 0 && (
           <div className="sidebar-widget">
             <h3 className="widget-label-dark">TOP POSTS</h3>
             <div className="related-mini-list-dark">
-              {[...latestPosts]
-                .sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0))
-                .slice(0, 3)
-                .map((lp: any, idx: number) => (
-                <a key={idx} href={`/${lp.slug}`} className="related-card-mini-dark">
+              {topPosts.map((lp: any, idx: number) => (
+                <Link key={idx} href={`/${lp.slug}`} className="related-card-mini-dark">
                   {lp.image_url && (
                     <div className="mini-thumb-rounded">
                       <Image 
@@ -50,7 +49,7 @@ export default function Sidebar({ latestPosts, supabaseUrl, isAboutPage, totalVi
                       </div>
                     )}
                   </div>
-                </a>
+                </Link>
               ))}
             </div>
           </div>
@@ -62,7 +61,7 @@ export default function Sidebar({ latestPosts, supabaseUrl, isAboutPage, totalVi
             <h3 className="widget-label-dark"> MỚI NHẤT</h3>
             <div className="related-mini-list-dark">
               {latestPosts.map((lp: any) => (
-                <a key={lp.slug} href={`/${lp.slug}`} className="related-card-mini-dark">
+                <Link key={lp.slug} href={`/${lp.slug}`} className="related-card-mini-dark">
                   {lp.image_url && (
                     <div className="mini-thumb-rounded">
                        <Image 
@@ -75,7 +74,7 @@ export default function Sidebar({ latestPosts, supabaseUrl, isAboutPage, totalVi
                     </div>
                   )}
                   <span className="mini-title-dark">{lp.title.replace(/\[\/?center\]/g, '')}</span>
-                </a>
+                </Link>
               ))}
             </div>
           </div>
@@ -114,9 +113,9 @@ export default function Sidebar({ latestPosts, supabaseUrl, isAboutPage, totalVi
             </div>
             
             {!isAboutPage && (
-              <a href="/about" className="see-more-about-btn">
+              <Link href="/about" className="see-more-about-btn">
                 XEM CHI TIẾT <span>→</span>
-              </a>
+              </Link>
             )}
           </div>
         </div>
@@ -138,14 +137,14 @@ export default function Sidebar({ latestPosts, supabaseUrl, isAboutPage, totalVi
                   const sizes = ['0.7rem', '0.85rem', '1.1rem', '0.65rem', '1.25rem'];
                   const size = sizes[i % sizes.length];
                   return (
-                    <a 
+                    <Link 
                       key={tag} 
                       href={`/tag/${tag}`} 
                       className="tag-cloud-link"
                       style={{ fontSize: size }}
                     >
                       #{tag}
-                    </a>
+                    </Link>
                   );
                 })}
              </div>

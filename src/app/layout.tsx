@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import React from "react";
+import StyledJsxRegistry from "./registry";
 
 export const metadata: Metadata = {
   title: "Bit-by-Bit | with Linh",
@@ -24,7 +25,9 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body>
-        {children}
+        <StyledJsxRegistry>
+          {children}
+        </StyledJsxRegistry>
       </body>
     </html>
   );

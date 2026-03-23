@@ -4,26 +4,39 @@ import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Heart, Share2 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
-export default function BlogFeed({ initialPosts, filterTag }: { initialPosts: any[], filterTag?: string }) {
+export default function BlogFeed({ initialPosts, filterTag, searchQuery }: { initialPosts: any[], filterTag?: string, searchQuery?: string }) {
   const [posts, setPosts] = useState(initialPosts.filter(p => p.priority >= 0 && !p.category?.includes('[HIDDEN]') && !p.tags?.some((t: string) => t.includes('[HIDDEN]'))));
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(initialPosts.length >= 5);
+  const [hasMore, setHasMore] = useState(initialPosts.length >= 10);
   const loader = useRef(null);
   const supabase = createClient();
+
+  // Reset state when search query changes
+  useEffect(() => {
+    setPosts(initialPosts);
+    setPage(1);
+    setHasMore(initialPosts.length >= 10);
+  }, [searchQuery, initialPosts]);
 
   const loadMore = async () => {
     if (loading || !hasMore) return;
     setLoading(true);
     
-    const from = page * 5;
-    const to = from + 5 - 1;
+    const from = page * 10;
+    const to = from + 10 - 1;
 
     let query = supabase
       .from('posts')
       .select('*')
+      .not('category', 'ilike', '[HIDDEN]%')
       .gte('priority', 0);
+
+    if (searchQuery) {
+      query = query.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
+    }
 
     if (filterTag) {
       query = query.contains('tags', [filterTag]);
@@ -35,10 +48,10 @@ export default function BlogFeed({ initialPosts, filterTag }: { initialPosts: an
       .range(from, to);
 
     if (data && data.length > 0) {
-      const filtered = data.filter(p => !p.category?.includes('[HIDDEN]') && !p.tags?.some((t: string) => t.includes('[HIDDEN]')));
+      const filtered = data.filter(p => !p.tags?.some((t: string) => t.includes('[HIDDEN]')));
       setPosts((prev) => [...prev, ...filtered]);
       setPage((prev) => prev + 1);
-      if (data.length < 5) setHasMore(false);
+      if (data.length < 10) setHasMore(false);
     } else {
       setHasMore(false);
     }
@@ -99,26 +112,30 @@ export default function BlogFeed({ initialPosts, filterTag }: { initialPosts: an
           <header className="feed-post-header">
             <div className="meta-overline">
               <span className="cat-chip">{post.category}</span>
-              {post.tags && post.tags.slice(0, 3).map((tag: string) => (
-                <a href={`/tag/${tag}`} key={tag} className="tag-link-mini">#{tag}</a>
-              ))}
               <span className="dot">•</span>
               <span className="date-text">{new Date(post.created_at).toLocaleDateString('vi-VN')}</span>
+              <span className="dot">•</span>
               {post.likes_count > 0 && (
                 <>
+                  <span className="likes-badge">
+                    <Heart size={12} fill="#ef4444" color="#ef4444" />
+                    {post.likes_count}
+                  </span>
                   <span className="dot">•</span>
-                  <span className="likes-badge"><Heart size={12} fill="#ef4444" color="#ef4444" strokeWidth={3} /> {post.likes_count}</span>
                 </>
               )}
+              {post.tags && post.tags.slice(0, 5).map((tag: string) => (
+                <Link href={`/tag/${tag}`} key={tag} className="tag-link-mini">#{tag}</Link>
+              ))}
             </div>
             <h2 className="feed-post-title" style={post.title.includes('[center]') ? {textAlign: 'center'} : {}}>
-              <a href={`/${post.slug}`}>{post.title.replace(/\[\/?center\]/g, '')}</a>
+              <Link href={`/${post.slug}`}>{post.title.replace(/\[\/?center\]/g, '')}</Link>
             </h2>
           </header>
 
           {post.image_url && (
             <div className="feed-post-featured-image">
-              <a href={`/${post.slug}`}>
+              <Link href={`/${post.slug}`}>
                 <Image 
                   src={post.image_url} 
                   alt={post.title} 
@@ -127,14 +144,14 @@ export default function BlogFeed({ initialPosts, filterTag }: { initialPosts: an
                   sizes="(max-width: 1100px) 100vw, 800px"
                   priority={posts.indexOf(post) < 2}
                 />
-              </a>
+              </Link>
             </div>
           )}
 
           <div className="feed-post-body markdown-body font-lora">
             <div dangerouslySetInnerHTML={{ __html: renderContent(post.content) }} />
             <div className="read-more-gradient-box">
-               <a href={`/${post.slug}`} className="continue-reading-btn">TIẾP TỤC ĐỌC →</a>
+               <Link href={`/${post.slug}`} className="continue-reading-btn">TIẾP TỤC ĐỌC →</Link>
             </div>
           </div>
         </article>
@@ -199,6 +216,21 @@ export default function BlogFeed({ initialPosts, filterTag }: { initialPosts: an
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-in { animation: fadeIn 0.8s ease-out forwards; }
+
+        @media (max-width: 1024px) {
+          .feed-post-item { margin-bottom: 5rem; }
+          .feed-post-title { font-size: 1.85rem; margin-bottom: 1.5rem; }
+          .markdown-body { font-size: 1.05rem; line-height: 1.7; max-height: 300px; }
+          .feed-post-featured-image { margin-bottom: 2rem; border-radius: 0.75rem; }
+          .meta-overline { gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+          .continue-reading-btn { padding: 0.6rem 1.5rem; font-size: 0.75rem; }
+        }
+
+        @media (max-width: 480px) {
+           .feed-post-title { font-size: 1.6rem; }
+           .markdown-body { font-size: 1rem; }
+           .meta-overline { font-size: 0.65rem; }
+        }
       `}} />
     </div>
   );

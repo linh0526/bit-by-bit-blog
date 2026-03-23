@@ -1,40 +1,42 @@
 import { Search } from "lucide-react";
-import React from "react";
+import React, { Suspense } from "react";
 import UserStatus from "./components/UserStatus";
+import Link from "next/link";
+import { createClient } from "@/utils/supabase/server";
+import { cookies } from "next/headers";
+import SearchInput from "./components/SearchInput";
 
-export default function PublicLayout({
+export default async function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <div className="layout-root">
       <header className="header glass fixed-top">
         <nav className="nav header-grid">
           <div className="header-left">
-            <a href="/" className="logo">
+            <Link href="/" className="logo">
               <span className="logo-bit">bitbybit</span>
               <span className="logo-separator">/</span>
               <span className="logo-bit">with_linh</span>
-            </a>
+            </Link>
           </div>
           <div className="header-center">
             <div className="nav-links">
-              <a href="/" className="nav-link">BLOG</a>
-              <a href="/about" className="nav-link">ABOUT</a>
+              <Link href="/" className="nav-link">BLOG</Link>
+              <Link href="/about" className="nav-link">ABOUT</Link>
             </div>
           </div>
           <div className="header-right">
-            <form action="/" className="header-search-form">
-              <input 
-                type="text" 
-                name="q" 
-                placeholder="Tìm..." 
-                className="header-search-input"
-              />
-              <button type="submit" className="search-btn-icon"><Search size={16} /></button>
-            </form>
-            <UserStatus />
+            <Suspense fallback={<div className="search-placeholder" />}>
+              <SearchInput />
+            </Suspense>
+            <UserStatus initialUser={user} />
           </div>
         </nav>
       </header>
@@ -66,19 +68,40 @@ export default function PublicLayout({
         }
         .header-grid {
           display: grid;
-          grid-template-columns: 320px 1fr 340px;
+          grid-template-columns: 1fr auto 1fr;
           align-items: center;
           width: 100%;
-          max-width: 100%;
+          padding: 0 2.5rem;
         }
-        .header-left { padding-left: 2.5rem; }
+        .header-left { display: flex; justify-content: flex-start; }
         .header-center { display: flex; justify-content: center; }
         .header-right { 
           display: flex; 
           justify-content: flex-end; 
-          padding-right: 2.5rem; 
-          gap: 1.5rem;
+          gap: 1rem;
           align-items: center;
+        }
+        .search-placeholder { 
+          width: 140px; 
+          height: 32px; 
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+          .header-grid {
+            grid-template-columns: 1fr auto;
+            padding: 0 1rem;
+          }
+          .header-center { display: none; }
+          .logo { font-size: 1rem; }
+          .search-placeholder { width: 100px; }
+        }
+
+        @media (max-width: 480px) {
+           .logo { font-size: 0.85rem; }
+           .logo-separator { margin: 0 0.15rem; }
         }
 
         .logo {
@@ -109,53 +132,25 @@ export default function PublicLayout({
           color: #ffffff;
           transform: translateY(-1px);
         }
-
-        .header-search-form {
-          position: relative;
-          display: flex;
-          align-items: center;
-          width: 200px;
-        }
-        .header-search-input {
-          width: 100%;
-          padding: 0.4rem 1rem;
-          padding-right: 2.2rem;
-          border-radius: 2rem;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          background: rgba(255, 255, 255, 0.05);
-          color: #ffffff;
-          font-size: 0.8rem;
-          outline: none;
-          transition: all 0.3s ease;
-        }
-        .header-search-input:focus {
-          border-color: #ffffff;
-          background: rgba(255, 255, 255, 0.1);
-          width: 240px;
-        }
-        .search-btn-icon {
-          position: absolute;
-          right: 0.8rem;
-          background: none;
-          border: none;
-          font-size: 0.8rem;
-          cursor: pointer;
-          color: rgba(255, 255, 255, 0.5);
-        }
-        .search-btn-icon:hover {
-          color: #ffffff;
-        }
         .main-content {
           flex-grow: 1;
         }
         .footer {
-          padding: 0.5rem 0 0.5rem;
+          padding: 1rem 0;
           display: flex;
           justify-content: space-between;
           align-items: center;
           border-top: 1px solid var(--color-border);
           opacity: 0.6;
           font-size: 0.8125rem;
+        }
+        @media (max-width: 600px) {
+          .footer {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+            padding: 2rem 0;
+          }
         }
         .social {
           display: flex;

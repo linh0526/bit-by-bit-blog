@@ -204,9 +204,16 @@ export default function AdminLayout({
 
         .admin-page-content { padding: 4rem; max-width: 1400px; margin: 0 auto; width: 100%; }
 
-        @media (max-width: 1200px) {
-          .admin-page-content { padding: 2rem; }
-          .admin-top-bar { padding: 0 2rem; }
+        @media (max-width: 1024px) {
+          :root { --sidebar-width: 0px; }
+          .admin-sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+          .admin-sidebar.mobile-open { transform: translateX(0); width: 280px; }
+          .admin-main-viewport { margin-left: 0; }
+          .admin-top-bar { padding: 0 1.5rem; }
+          .search-trigger { width: 40px; }
+          .search-trigger span, .search-trigger kbd { display: none; }
+          .profile-text { display: none; }
+          .admin-page-content { padding: 1.5rem; }
         }
       `}} />
     </div>

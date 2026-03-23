@@ -18,9 +18,20 @@ export default function PostInteractions({ postId, initialLikes, postTitle }: Po
 
   useEffect(() => {
     const fetchUserAndStatus = async () => {
+      // Fetch current user
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+
+      // Fetch actual like count to ensure syncing with DB
+      const { count } = await supabase
+        .from("post_likes")
+        .select("*", { count: 'exact', head: true })
+        .eq("post_id", postId);
+      
+      if (count !== null) setLikes(count);
+
       if (user) {
+        // Check if user already liked this post
         const { data } = await supabase
           .from("post_likes")
           .select("*")
@@ -41,9 +52,12 @@ export default function PostInteractions({ postId, initialLikes, postTitle }: Po
 
   const handleLike = async () => {
     if (!user) {
+      const next = window.location.pathname + window.location.search;
       await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin + '/auth/callback' }
+        options: { 
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` 
+        }
       });
       return;
     }
@@ -53,6 +67,7 @@ export default function PostInteractions({ postId, initialLikes, postTitle }: Po
 
     try {
       if (isLiked) {
+        // Unlike: Remove from post_likes
         const { error } = await supabase
           .from("post_likes")
           .delete()
@@ -60,19 +75,24 @@ export default function PostInteractions({ postId, initialLikes, postTitle }: Po
           .eq("user_id", user.id);
         
         if (!error) {
-          setLikes(prev => Math.max(0, prev - 1));
+          const newLikes = Math.max(0, likes - 1);
+          setLikes(newLikes);
           setIsLiked(false);
-          await supabase.from('posts').update({ likes_count: Math.max(0, likes - 1) }).eq('id', postId);
+          // Try to update denormalized count (best effort)
+          await supabase.from('posts').update({ likes_count: newLikes }).eq('id', postId);
         }
       } else {
+        // Like: Insert into post_likes
         const { error } = await supabase
           .from("post_likes")
           .insert({ post_id: postId, user_id: user.id });
         
         if (!error) {
-          setLikes(prev => prev + 1);
+          const newLikes = likes + 1;
+          setLikes(newLikes);
           setIsLiked(true);
-          await supabase.from('posts').update({ likes_count: likes + 1 }).eq('id', postId);
+          // Try to update denormalized count (best effort)
+          await supabase.from('posts').update({ likes_count: newLikes }).eq('id', postId);
         }
       }
     } catch (err) {
