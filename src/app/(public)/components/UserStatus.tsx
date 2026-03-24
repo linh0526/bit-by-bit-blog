@@ -52,14 +52,12 @@ export default function UserStatus({ initialUser }: { initialUser: any }) {
           <LogOut size={16} />
         </button>
         <style jsx>{`
-          .user-profile-nav { display: flex; align-items: center; gap: 1rem; background: rgba(255,255,255,0.05); padding: 0.25rem 0.5rem 0.25rem 1rem; border-radius: 2rem; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
+          .user-profile-nav { display: flex; align-items: center; gap: 1rem; background: rgba(255,255,255,0.05); padding: 0.25rem 0.5rem 0.25rem 1rem; border-radius: 2rem; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; color: #fff; }
           .user-info { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
-          .user-avatar-small { width: 24px; height: 24px; min-width: 24px; min-height: 24px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); object-fit: cover; flex-shrink: 0; }
           .user-name-small { font-size: 0.75rem; font-weight: 700; color: #fff; letter-spacing: 0.02em; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
           .logout-btn-icon { background: none; border: none; color: #666; cursor: pointer; display: flex; align-items: center; transition: all 0.2s; padding: 0.2rem; }
           .logout-btn-icon:hover { color: #ff4d4d; }
-          .user-loading { width: 40px; height: 32px; background: rgba(255,255,255,0.05); border-radius: 2rem; animation: pulse 1.5s infinite; }
-          @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.8; } }
+          .user-loading { width: 40px; height: 32px; background: rgba(255,255,255,0.05); border-radius: 2rem; }
         `}</style>
       </div>
     );

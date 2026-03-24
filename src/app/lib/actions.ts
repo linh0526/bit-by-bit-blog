@@ -329,16 +329,10 @@ export async function incrementView(slug?: string) {
     const { error: rpcError } = await supabase.rpc('increment_post_views', { p_slug: slug });
     
     if (rpcError) {
-      console.warn(`SERVER: RPC increment_post_views failed for ${slug}, trying direct update:`, rpcError);
-      // Fallback: direct update
+      // Fallback: direct update (RPC might have column name mismatch: view_count vs views_count)
       const { data: post } = await supabase.from('posts').select('views_count').eq('slug', slug).single();
       if (post) {
-        const { error: updateError } = await supabase.from('posts').update({ views_count: (post.views_count || 0) + 1 }).eq('slug', slug);
-        if (!updateError) {
-          console.log(`SERVER: Direct views_count update successful for ${slug}`);
-        } else {
-          console.error(`SERVER: Direct update also failed:`, updateError);
-        }
+        await supabase.from('posts').update({ views_count: (post.views_count || 0) + 1 }).eq('slug', slug);
       }
     }
   }
@@ -346,7 +340,6 @@ export async function incrementView(slug?: string) {
   // 2. Increment global total views
   const { error: globalRpcError } = await supabase.rpc('increment_total_views');
   if (globalRpcError) {
-    console.warn('SERVER: RPC increment_total_views failed, trying direct update:', globalRpcError);
     const { data: stats } = await supabase.from('site_stats').select('value').eq('key', 'total_views').single();
     if (stats) {
       await supabase.from('site_stats').update({ value: (stats.value || 0) + 1 }).eq('key', 'total_views');

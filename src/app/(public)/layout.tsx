@@ -18,25 +18,35 @@ export default async function PublicLayout({
   const { data: { user } } = await supabase.auth.getUser();
 
   // Fetch Sidebar data ONCE for all pages
-  const [latestResult, topResult, statsResult, tagResult] = await Promise.all([
+  const [latestResult, topResult, statsResult, postsForTagsResult] = await Promise.all([
     adminSupabase.from('posts')
       .select('id, title, slug, created_at, category, image_url, likes_count, views_count')
       .not('category', 'ilike', '[HIDDEN]%').gte('priority', 0).order('created_at', { ascending: false }).limit(5),
     adminSupabase.from('posts')
       .select('id, title, slug, created_at, category, image_url, likes_count, views_count')
-      .not('category', 'ilike', '[HIDDEN]%').gte('priority', 0).order('likes_count', { ascending: false }).limit(3),
+      .not('category', 'ilike', '[HIDDEN]%').gte('priority', 0).order('likes_count', { ascending: false }).limit(5),
     adminSupabase.from('site_stats').select('value').eq('key', 'total_views').single(),
-    adminSupabase.from('tags').select('name').order('post_count', { ascending: false }).limit(50)
+    adminSupabase.from('posts').select('category, tags').not('category', 'ilike', '[HIDDEN]%')
   ]);
 
   const latestPosts = latestResult.data || [];
   const topPosts = topResult.data || [];
   const statsData = statsResult.data;
-  const allTags = tagResult.data?.map((t: any) => t.name) || [];
+  
+  // Extract unique tags and categories directly from posts for 100% accuracy
+  const tagSet = new Set<string>();
+  postsForTagsResult.data?.forEach(p => {
+    if (p.category && !p.category.includes('[HIDDEN]')) tagSet.add(p.category);
+    p.tags?.forEach((t: string) => {
+      if (!t.includes('[HIDDEN]')) tagSet.add(t);
+    });
+  });
+  const allTags = Array.from(tagSet).sort();
 
   return (
     <div className="layout-root">
-      <header className="header glass fixed-top">
+      <header className="header fixed-top">
+        <div className="top-loading-bar" />
         <nav className="nav header-grid">
           <div className="header-left">
             <Link href="/" className="logo">
@@ -65,14 +75,12 @@ export default async function PublicLayout({
         {children}
 
         {/* Persistent Right Sidebar - Column 3 */}
-        <aside className="sidebar right-sidebar">
-          <Sidebar 
-            latestPosts={latestPosts} 
-            topPosts={topPosts}
-            allTags={allTags}
-            totalViews={statsData?.value || 0}
-          />
-        </aside>
+        <Sidebar 
+          latestPosts={latestPosts} 
+          topPosts={topPosts}
+          allTags={allTags}
+          totalViews={statsData?.value || 0}
+        />
       </div>
 
       <footer className="footer container">
@@ -93,8 +101,8 @@ export default async function PublicLayout({
           position: sticky;
           top: 0;
           z-index: 1000;
-          padding: 0.5rem 0;
-          background-color: #000000;
+          padding: 0.8rem 0;
+          background-color: #000000; /* Black bg */
           border-bottom: 1px solid rgba(255, 255, 255, 0.1);
           color: #ffffff;
         }
@@ -139,9 +147,10 @@ export default async function PublicLayout({
         .logo {
           font-family: var(--font-heading);
           font-size: 1.25rem;
-          font-weight: 700;
+          font-weight: 800;
           letter-spacing: -0.05em;
           text-transform: uppercase;
+          color: #ffffff;
         }
         .logo-separator {
           margin: 0 0.5rem;
@@ -153,10 +162,10 @@ export default async function PublicLayout({
         }
         .nav-link {
           font-size: 0.875rem;
-          font-weight: 500;
+          font-weight: 600;
           letter-spacing: 0.05em;
           color: #ffffff;
-          opacity: 0.8;
+          opacity: 0.7;
           transition: all 0.2s;
         }
         .nav-link:hover {
@@ -164,17 +173,35 @@ export default async function PublicLayout({
           color: #ffffff;
           transform: translateY(-1px);
         }
+        .top-loading-bar {
+          position: absolute;
+          top: 0; left: 0;
+          height: 3px;
+          background: linear-gradient(to right, #9333ea, #3b82f6);
+          width: 100%;
+          animation: loadProgress 2s ease-in-out forwards;
+          z-index: 1001;
+        }
+        @keyframes loadProgress {
+          0% { transform: scaleX(0); transform-origin: left; }
+          70% { transform: scaleX(0.9); transform-origin: left; }
+          100% { transform: scaleX(1); transform-origin: left; opacity: 0; }
+        }
+
         .main-content {
           flex-grow: 1;
         }
         .footer {
-          padding: 1rem 0;
+          padding: 0.8rem 4rem;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          border-top: 1px solid var(--color-border);
-          opacity: 0.6;
+          border-top: 1px solid #111;
+          opacity: 1;
           font-size: 0.8125rem;
+          background-color: #000000;
+          color: #666;
+          position: relative;
         }
         @media (max-width: 600px) {
           .footer {

@@ -7,6 +7,7 @@ import {
   ExternalLink, 
   Edit, 
   Eye, 
+  Heart,
   Filter,
   ArrowUpRight,
   FileText
@@ -76,7 +77,8 @@ export default async function PostsManagement() {
                         <span className="post-title-link">{post.title}</span>
                         <div className="post-meta-sub">
                           <span className="slug-badge">/{post.slug}</span>
-                          <span className="view-count"><Eye size={12} /> {Math.floor(Math.random() * 500) + 10} views</span>
+                          <span className="view-count" title="Lượt xem"><Eye size={12} /> {post.views_count || 0} views</span>
+                          <span className="view-count" title="Lượt thích" style={{ color: '#ef4444' }}><Heart size={12} fill="#ef4444" /> {post.likes_count || 0} likes</span>
                         </div>
                       </div>
                     </td>

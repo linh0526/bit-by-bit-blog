@@ -29,11 +29,17 @@ export default async function Home({
 
   return (
     <>
-      {/* Column 1: Empty on home */}
-      <aside className="sidebar left-sidebar on-home-none"></aside>
-      
-      {/* Column 2: Blog Feed */}
-      <main className="feed-column">
+      {/* Blog Feed (Span Column 1 & 2) */}
+      <main className="feed-column-home animate-in">
+        {q && (
+          <header className="collection-header">
+            <h1 className="collection-title">
+              Tìm kiếm: <span className="collection-name">{q}</span>
+            </h1>
+            <p className="search-result-count">Tìm thấy {initialPosts?.length || 0} kết quả</p>
+          </header>
+        )}
+        
         <BlogFeed 
           initialPosts={initialPosts || []} 
           supabaseUrl={supabaseUrl || ''}

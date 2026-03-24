@@ -5,12 +5,13 @@ import { createClient } from "@/utils/supabase/client";
 
 interface PostInteractionsProps {
   postId: string;
+  slug: string;
   initialLikes: number;
   postTitle: string;
   viewCount?: number;
 }
 
-export default function PostInteractions({ postId, initialLikes, postTitle, viewCount }: PostInteractionsProps) {
+export default function PostInteractions({ postId, slug, initialLikes, postTitle, viewCount }: PostInteractionsProps) {
   const [likes, setLikes] = useState(initialLikes || 0);
   const [isLiked, setIsLiked] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -60,6 +61,26 @@ export default function PostInteractions({ postId, initialLikes, postTitle, view
 
     return () => subscription.unsubscribe();
   }, [postId, supabase]);
+
+  // Record view once per session
+  useEffect(() => {
+    const recordView = async () => {
+      // Check if already viewed in this session
+      const viewedKey = `viewed_${postId}`;
+      if (!sessionStorage.getItem(viewedKey)) {
+        try {
+          const { incrementView } = await import("../../lib/actions");
+          await incrementView(slug);
+          sessionStorage.setItem(viewedKey, "true");
+          // Optionally update local state too
+          setViews(v => v + 1);
+        } catch (err) {
+          console.error("Error recording view:", err);
+        }
+      }
+    };
+    recordView();
+  }, [postId, slug]);
 
   const handleLike = async () => {
     if (!user) {

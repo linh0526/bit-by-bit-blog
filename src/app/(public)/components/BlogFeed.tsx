@@ -85,108 +85,116 @@ export default function BlogFeed({ initialPosts, filterTag, searchQuery, supabas
 
   return (
     <div className="blog-feed">
-      {posts.map((post) => (
-        <article key={post.id} className={`feed-post-item ${posts.indexOf(post) < 2 ? "" : "animate-in"}`}>
-          <header className="feed-post-header">
-            <div className="meta-overline">
-              <span className="cat-chip">{post.category}</span>
-              <span className="dot">•</span>
-              <span className="date-text">{new Date(post.created_at).toLocaleDateString('vi-VN')}</span>
-              <span className="dot">•</span>
-              {post.likes_count > 0 && (
-                <>
-                  <span className="likes-badge">
-                    <Heart size={12} fill="#ef4444" color="#ef4444" />
-                    {post.likes_count}
-                  </span>
+      {posts.map((post, idx) => {
+        const isPriority = idx < 2 && !searchQuery; // First 2 posts are 1/2 width
+        
+        return (
+          <article 
+            key={post.id} 
+            className={`feed-post-item ${isPriority ? 'priority-layout' : 'grid-layout'} ${idx < 2 ? "" : "animate-in"}`}
+          >
+            {post.image_url && (
+              <div className="feed-post-featured-image">
+                <Link href={`/${post.slug}`}>
+                  <Image 
+                    src={post.image_url} 
+                    alt={post.image_alt || post.title} 
+                    fill
+                    className="featured-img"
+                    sizes={isPriority ? "(max-width: 1100px) 100vw, 550px" : "(max-width: 1100px) 50vw, 300px"}
+                    priority={idx < 2}
+                  />
+                </Link>
+              </div>
+            )}
+  
+            <div className="feed-post-content">
+              <header className="feed-post-header">
+                <div className="meta-overline">
+                  <span className="cat-chip">{post.category}</span>
                   <span className="dot">•</span>
-                </>
-              )}
-              {post.tags && post.tags.slice(0, 5).map((tag: string) => (
-                <Link href={`/tag/${tag}`} key={tag} className="tag-link-mini">#{tag}</Link>
-              ))}
+                  <span className="date-text">{new Date(post.created_at).toLocaleDateString('vi-VN')}</span>
+                </div>
+                <h2 className="feed-post-title">
+                  <Link href={`/${post.slug}`}>{post.title?.replace(/\[\/?center\]/g, '')}</Link>
+                </h2>
+              </header>
+  
+              <div className="feed-post-excerpt font-lora">
+                <p>{isPriority ? post.excerpt : (post.excerpt?.slice(0, 80) + (post.excerpt?.length > 80 ? '...' : ''))}</p>
+                <Link href={`/${post.slug}`} className="read-more-link">
+                  {isPriority ? 'Tiếp tục đọc →' : 'Xem thêm'}
+                </Link>
+              </div>
             </div>
-            <h2 className="feed-post-title" style={post.title?.includes('[center]') ? {textAlign: 'center'} : {}}>
-              <Link href={`/${post.slug}`}>{post.title?.replace(/\[\/?center\]/g, '')}</Link>
-            </h2>
-          </header>
-
-          {post.image_url && (
-            <div className="feed-post-featured-image">
-              <Link href={`/${post.slug}`}>
-                <Image 
-                  src={post.image_url} 
-                  alt={post.image_alt || post.title} 
-                  fill
-                  className="featured-img"
-                  sizes="(max-width: 1100px) 100vw, 800px"
-                  priority={posts.indexOf(post) === 0}
-                  {...(posts.indexOf(post) === 0 ? { fetchPriority: "high" } : {})}
-                />
-              </Link>
-            </div>
-          )}
-
-          <div className="feed-post-body markdown-body font-lora">
-            <p>{post.excerpt}</p>
-            <div className="read-more-gradient-box">
-               <Link href={`/${post.slug}`} className="continue-reading-btn">TIẾP TỤC ĐỌC →</Link>
-            </div>
-          </div>
-        </article>
-      ))}
+          </article>
+        );
+      })}
       
       {hasMore && (
         <div ref={loader} className="loading-trigger">
           <div className="spinner"></div>
-          <p>Đang tải thêm bài viết...</p>
+          <p>Tải thêm bài viết...</p>
         </div>
       )}
 
       <style dangerouslySetInnerHTML={{ __html: `
-        .blog-feed { width: 100%; }
-        .feed-post-item { margin-bottom: 10rem; }
-        .meta-overline { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: #888; }
-        .cat-chip { background: #000; color: #fff; padding: 0.2rem 0.6rem; border-radius: 2rem; font-size: 0.6rem; }
-        .tag-link-mini { color: #9333ea; opacity: 0.6; text-decoration: none; font-size: 0.65rem; transition: opacity 0.2s; }
-        .tag-link-mini:hover { opacity: 1; }
-        .dot { opacity: 0.3; margin: 0 0.2rem; }
-        .likes-badge { display: flex; align-items: center; gap: 0.35rem; color: #ef4444; font-weight: 800; font-size: 0.7rem; }
+        .blog-feed { 
+          width: 100%; 
+          display: grid; 
+          grid-template-columns: repeat(12, 1fr); 
+          gap: 5rem 2.25rem; 
+        }
         
-        .feed-post-title { font-size: 2.75rem; font-weight: 900; letter-spacing: -0.04em; line-height: 1.1; margin-bottom: 2rem; }
-        .feed-post-title a { text-decoration: none; color: inherit; transition: opacity 0.2s; }
+        .priority-layout { 
+          grid-column: span 6; 
+          border-bottom: 2px solid #000;
+          padding-bottom: 3rem;
+          margin-bottom: 1rem;
+        }
+        
+        .priority-layout .feed-post-title { font-size: 2rem; line-height: 1.1; margin-bottom: 1rem; }
+        .priority-layout .feed-post-excerpt p { font-size: 1.1rem; color: #666; }
+        
+        .grid-layout { grid-column: span 3; }
+        .grid-layout .feed-post-title { font-size: 1.25rem; margin-bottom: 0.75rem; line-height: 1.3; }
+        .grid-layout .feed-post-excerpt p { font-size: 0.85rem; line-height: 1.6; color: #555; }
+        .grid-layout .feed-post-featured-image { aspect-ratio: 16/10; margin-bottom: 1.5rem; }
+        .grid-layout .read-more-link { padding: 0.3rem 1rem; font-size: 0.6rem; }
+
+        .feed-post-item { width: 100%; display: flex; flex-direction: column; height: 100%; }
+        .meta-overline { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: #888; }
+        .cat-chip { background: #000; color: #fff; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.6rem; }
+        .dot { opacity: 0.3; }
+        
+        .feed-post-title { font-weight: 900; letter-spacing: -0.04em; }
+        .feed-post-title a { text-decoration: none; color: #111; transition: opacity 0.2s; }
         .feed-post-title a:hover { opacity: 0.7; }
         
-        .feed-post-featured-image { margin-bottom: 3rem; overflow: hidden; border-radius: 1rem; aspect-ratio: 16/9; position: relative; }
-        .featured-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s; }
-        .feed-post-featured-image:hover .featured-img { transform: scale(1.03); }
+        .feed-post-featured-image { margin-bottom: 2rem; overflow: hidden; border-radius: 1.25rem; aspect-ratio: 16/9; position: relative; background: #f7f7f7; }
+        .featured-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        .feed-post-featured-image:hover .featured-img { transform: scale(1.05); }
 
-        .font-lora { font-family: var(--font-serif); }
-        .markdown-body { font-size: 1.25rem; line-height: 1.8; color: #333; position: relative; max-height: 400px; overflow: hidden; }
-        .read-more-gradient-box {
-           position: absolute;
-           bottom: 0; left: 0; right: 0;
-           height: 120px;
-           background: linear-gradient(to top, #ffffff 10%, rgba(255,255,255,0.8) 40%, transparent);
-           display: flex;
-           justify-content: center;
-           align-items: flex-end;
-           padding-bottom: 0.5rem;
+        .feed-post-content { display: flex; flex-direction: column; flex: 1; }
+        .feed-post-excerpt { display: flex; flex-direction: column; flex: 1; }
+        .feed-post-excerpt p { color: #444; margin-bottom: 2rem; flex: 1; }
+        .read-more-link { 
+          margin-top: auto;
+          align-self: flex-start;
+          display: inline-block; 
+          background: #000; 
+          color: #fff; 
+          padding: 0.6rem 1.75rem; 
+          border-radius: 2rem; 
+          font-size: 0.75rem; 
+          font-weight: 800; 
+          letter-spacing: 0.05em; 
+          transition: all 0.2s; 
+          text-decoration: none;
         }
-        .continue-reading-btn {
-           background: #000;
-           color: #fff;
-           padding: 0.75rem 2rem;
-           border-radius: 2rem;
-           text-decoration: none;
-           font-size: 0.8rem;
-           font-weight: 800;
-           letter-spacing: 0.05em;
-           transition: transform 0.2s;
-        }
-        .continue-reading-btn:hover { transform: translateY(-2px); }
+        .read-more-link:hover { transform: translateY(-2px); background: #333; }
 
-        .loading-trigger { padding: 4rem 0; text-align: center; color: #999; }
+        .loading-trigger { grid-column: 1 / -1; padding: 4rem 0; text-align: center; color: #999; }
         .spinner {
           width: 2rem; height: 2rem; border: 3px solid #eee; border-top-color: #000; border-radius: 50%;
           margin: 0 auto 1rem; animation: spin 0.8s linear infinite;
@@ -197,18 +205,16 @@ export default function BlogFeed({ initialPosts, filterTag, searchQuery, supabas
         .animate-in { animation: fadeIn 0.8s ease-out forwards; }
 
         @media (max-width: 1024px) {
-          .feed-post-item { margin-bottom: 5rem; }
-          .feed-post-title { font-size: 1.85rem; margin-bottom: 1.5rem; }
-          .markdown-body { font-size: 1.05rem; line-height: 1.7; max-height: 300px; }
-          .feed-post-featured-image { margin-bottom: 2rem; border-radius: 0.75rem; }
-          .meta-overline { gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
-          .continue-reading-btn { padding: 0.6rem 1.5rem; font-size: 0.75rem; }
+          .blog-feed { grid-template-columns: repeat(12, 1fr); gap: 4rem 2rem; }
+          .priority-layout, .grid-layout { grid-column: span 6; }
+          .priority-layout .feed-post-title { font-size: 2rem; }
         }
 
-        @media (max-width: 480px) {
-           .feed-post-title { font-size: 1.6rem; }
-           .markdown-body { font-size: 1rem; }
-           .meta-overline { font-size: 0.65rem; }
+        @media (max-width: 768px) {
+          .blog-feed { grid-template-columns: 1fr; }
+          .priority-layout, .grid-layout { grid-column: auto; }
+          .priority-layout .feed-post-title { font-size: 1.85rem; }
+          .priority-layout { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
         }
       `}} />
     </div>
