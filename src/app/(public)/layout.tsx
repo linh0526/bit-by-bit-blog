@@ -2,9 +2,10 @@ import { Search } from "lucide-react";
 import React, { Suspense } from "react";
 import UserStatus from "./components/UserStatus";
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createAdminClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import SearchInput from "./components/SearchInput";
+import Sidebar from "./components/Sidebar";
 
 export default async function PublicLayout({
   children,
@@ -12,8 +13,26 @@ export default async function PublicLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient(cookieStore); // Use for auth
+  const adminSupabase = createAdminClient(); // Use for fast public data
   const { data: { user } } = await supabase.auth.getUser();
+
+  // Fetch Sidebar data ONCE for all pages
+  const [latestResult, topResult, statsResult, tagResult] = await Promise.all([
+    adminSupabase.from('posts')
+      .select('id, title, slug, created_at, category, image_url, likes_count, views_count')
+      .not('category', 'ilike', '[HIDDEN]%').gte('priority', 0).order('created_at', { ascending: false }).limit(5),
+    adminSupabase.from('posts')
+      .select('id, title, slug, created_at, category, image_url, likes_count, views_count')
+      .not('category', 'ilike', '[HIDDEN]%').gte('priority', 0).order('likes_count', { ascending: false }).limit(3),
+    adminSupabase.from('site_stats').select('value').eq('key', 'total_views').single(),
+    adminSupabase.from('tags').select('name').order('post_count', { ascending: false }).limit(50)
+  ]);
+
+  const latestPosts = latestResult.data || [];
+  const topPosts = topResult.data || [];
+  const statsData = statsResult.data;
+  const allTags = tagResult.data?.map((t: any) => t.name) || [];
 
   return (
     <div className="layout-root">
@@ -40,9 +59,22 @@ export default async function PublicLayout({
           </div>
         </nav>
       </header>
-      <main className="main-content">
+
+      <div className="three-column-layout">
+        {/* The first two columns are provided by the children (Home or Post) */}
         {children}
-      </main>
+
+        {/* Persistent Right Sidebar - Column 3 */}
+        <aside className="sidebar right-sidebar">
+          <Sidebar 
+            latestPosts={latestPosts} 
+            topPosts={topPosts}
+            allTags={allTags}
+            totalViews={statsData?.value || 0}
+          />
+        </aside>
+      </div>
+
       <footer className="footer container">
         <p className="copyright">© {new Date().getFullYear()} Bit-by-Bit / with Linh</p>
         <div className="social">

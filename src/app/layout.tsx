@@ -1,7 +1,23 @@
 import type { Metadata } from "next";
+import { Be_Vietnam_Pro, Lora } from "next/font/google"; // Optimized font loading
 import "./globals.css";
 import React from "react";
 import StyledJsxRegistry from "./registry";
+
+const beVietnam = Be_Vietnam_Pro({
+  subsets: ["vietnamese"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  variable: "--font-be-vietnam",
+  display: "swap",
+});
+
+const lora = Lora({
+  subsets: ["vietnamese"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-lora",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Bit-by-Bit | with Linh",
@@ -34,8 +50,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
-      <body>
+    <html lang="vi" className={`${beVietnam.variable} ${lora.variable}`}>
+      <body className={beVietnam.className}>
         <StyledJsxRegistry>
           {children}
         </StyledJsxRegistry>

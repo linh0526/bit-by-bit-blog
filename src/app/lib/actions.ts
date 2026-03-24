@@ -28,6 +28,30 @@ async function uploadImageIfPresent(supabase: any, formData: FormData): Promise<
   return finalImageUrl;
 }
 
+async function syncTaxonomies(supabase: any, category: string, tags: string[]) {
+  try {
+    // 1. Upsert Category
+    if (category && !category.includes('[HIDDEN]')) {
+      const catSlug = category.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+      await supabase.from('categories').upsert({ name: category, slug: catSlug }, { onConflict: 'name' });
+    }
+
+    // 2. Upsert Tags
+    if (tags && tags.length > 0) {
+      const activeTags = tags.filter(t => !t.includes('[HIDDEN]'));
+      if (activeTags.length > 0) {
+        const tagInserts = activeTags.map(tag => ({
+          name: tag,
+          slug: tag.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]/g, '')
+        }));
+        await supabase.from('tags').upsert(tagInserts, { onConflict: 'name' });
+      }
+    }
+  } catch (err) {
+    console.error('SERVER: Error syncing taxonomies:', err);
+  }
+}
+
 export async function createPost(formData: FormData) {
   const supabase = createAdminClient()
 
@@ -76,6 +100,9 @@ export async function createPost(formData: FormData) {
     console.error('SERVER: Error creating post:', error)
     return { error: error.message }
   }
+
+  // SYNC TAXONOMIES
+  await syncTaxonomies(supabase, category, tags);
 
   console.log(`SERVER: Post created successfully: ${slug}`)
   revalidatePath('/admin')
@@ -132,6 +159,9 @@ export async function updatePost(id: string, formData: FormData) {
     return { error: error.message }
   }
 
+  // SYNC TAXONOMIES
+  await syncTaxonomies(supabase, category, tags);
+
   console.log(`SERVER: Post updated successfully: ${id}`)
   revalidatePath('/admin')
   revalidatePath('/admin/posts')
@@ -170,6 +200,12 @@ export async function deletePost(id: string) {
 
 export async function renameCategory(oldName: string, newName: string) {
   const supabase = createAdminClient()
+  
+  // 1. Update master table
+  const newSlug = newName.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+  await supabase.from('categories').update({ name: newName, slug: newSlug }).eq('name', oldName);
+
+  // 2. Update all posts
   const { error } = await supabase
     .from('posts')
     .update({ category: newName })
@@ -182,6 +218,11 @@ export async function renameCategory(oldName: string, newName: string) {
 
 export async function deleteCategory(name: string) {
   const supabase = createAdminClient()
+  
+  // 1. Delete from master table
+  await supabase.from('categories').delete().eq('name', name);
+
+  // 2. Clear from posts
   const { error } = await supabase
     .from('posts')
     .update({ category: 'UNASSIGNED' })
@@ -197,6 +238,14 @@ export async function toggleCategoryVisibility(name: string, isHidden: boolean) 
   const cleanName = name.replace('[HIDDEN] ', '');
   const newName = isHidden ? cleanName : `[HIDDEN] ${cleanName}`;
   
+  // If hidden, delete from master table so it doesn't show in cloud
+  if (!isHidden) { // We are hiding it
+     await supabase.from('categories').delete().eq('name', name);
+  } else { // We are unhiding it
+     const catSlug = cleanName.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+     await supabase.from('categories').upsert({ name: cleanName, slug: catSlug }, { onConflict: 'name' });
+  }
+
   const { error } = await supabase
     .from('posts')
     .update({ category: newName })
@@ -209,7 +258,12 @@ export async function toggleCategoryVisibility(name: string, isHidden: boolean) 
 
 export async function renameTag(oldTag: string, newTag: string) {
   const supabase = createAdminClient()
-  // Tag handling is more complex due to array column
+  
+  // 1. Update master table
+  const newSlug = newTag.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+  await supabase.from('tags').update({ name: newTag, slug: newSlug }).eq('name', oldTag);
+
+  // 2. Update all posts containing this tag
   const { data: posts, error: fetchError } = await supabase
     .from('posts')
     .select('id, tags')
@@ -229,6 +283,11 @@ export async function renameTag(oldTag: string, newTag: string) {
 
 export async function deleteTag(tag: string) {
   const supabase = createAdminClient()
+  
+  // 1. Delete from master table
+  await supabase.from('tags').delete().eq('name', tag);
+
+  // 2. Clear from posts
   const { data: posts, error: fetchError } = await supabase
     .from('posts')
     .select('id, tags')
@@ -247,8 +306,18 @@ export async function deleteTag(tag: string) {
 }
 
 export async function toggleTagVisibility(tag: string, isHidden: boolean) {
+  const supabase = createAdminClient();
   const cleanTag = tag.replace('[HIDDEN] ', '');
   const newTag = isHidden ? cleanTag : `[HIDDEN] ${cleanTag}`;
+  
+  // If hiding, remove from master table
+  if (!isHidden) {
+    await supabase.from('tags').delete().eq('name', tag);
+  } else {
+    const tagSlug = cleanTag.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+    await supabase.from('tags').upsert({ name: cleanTag, slug: tagSlug }, { onConflict: 'name' });
+  }
+
   return renameTag(tag, newTag);
 }
 
@@ -262,9 +331,14 @@ export async function incrementView(slug?: string) {
     if (rpcError) {
       console.warn(`SERVER: RPC increment_post_views failed for ${slug}, trying direct update:`, rpcError);
       // Fallback: direct update
-      const { data: post } = await supabase.from('posts').select('view_count').eq('slug', slug).single();
+      const { data: post } = await supabase.from('posts').select('views_count').eq('slug', slug).single();
       if (post) {
-        await supabase.from('posts').update({ view_count: (post.view_count || 0) + 1 }).eq('slug', slug);
+        const { error: updateError } = await supabase.from('posts').update({ views_count: (post.views_count || 0) + 1 }).eq('slug', slug);
+        if (!updateError) {
+          console.log(`SERVER: Direct views_count update successful for ${slug}`);
+        } else {
+          console.error(`SERVER: Direct update also failed:`, updateError);
+        }
       }
     }
   }
@@ -279,8 +353,8 @@ export async function incrementView(slug?: string) {
     }
   }
   
-  revalidatePath('/')
-  revalidatePath(`/${slug}`)
+  // REMOVED revalidatePath to allow caching. 
+  // Client components will handle showing fresh view counts.
 }
 
 export async function syncPostLikes(postId: string) {

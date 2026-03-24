@@ -1,20 +1,27 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Heart, Share2 } from "lucide-react";
+import { Heart, Share2, Eye } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
 interface PostInteractionsProps {
   postId: string;
   initialLikes: number;
   postTitle: string;
+  viewCount?: number;
 }
 
-export default function PostInteractions({ postId, initialLikes, postTitle }: PostInteractionsProps) {
+export default function PostInteractions({ postId, initialLikes, postTitle, viewCount }: PostInteractionsProps) {
   const [likes, setLikes] = useState(initialLikes || 0);
   const [isLiked, setIsLiked] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [views, setViews] = useState(viewCount || 0);
   const supabase = createClient();
+
+  useEffect(() => {
+    // Only update views if viewCount changes from props
+    if (viewCount !== undefined) setViews(viewCount);
+  }, [viewCount]);
 
   useEffect(() => {
     const fetchUserAndStatus = async () => {
@@ -22,13 +29,17 @@ export default function PostInteractions({ postId, initialLikes, postTitle }: Po
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
 
-      // Fetch actual like count to ensure syncing with DB
-      const { count } = await supabase
-        .from("post_likes")
-        .select("*", { count: 'exact', head: true })
-        .eq("post_id", postId);
+      // Fetch actual like and view count to ensure syncing with DB
+      const { data: postData } = await supabase
+        .from("posts")
+        .select("likes_count, views_count")
+        .eq("id", postId)
+        .single();
       
-      if (count !== null) setLikes(count);
+      if (postData) {
+        setLikes(postData.likes_count || 0);
+        setViews(postData.views_count || 0);
+      }
 
       if (user) {
         // Check if user already liked this post
@@ -115,18 +126,25 @@ export default function PostInteractions({ postId, initialLikes, postTitle }: Po
 
   return (
     <div className="post-interactions-row">
-      <button 
-        className={`like-btn ${isLiked ? 'active' : ''} ${loading ? 'loading' : ''}`} 
-        onClick={handleLike}
-      >
-        <Heart 
-          size={20} 
-          fill={isLiked ? "#ef4444" : "none"} 
-          color={isLiked ? "#ef4444" : "currentColor"} 
-          style={{ transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}
-        />
-        <span>{likes}</span>
-      </button>
+      <div className="interaction-left-group">
+        <button 
+          className={`like-btn ${isLiked ? 'active' : ''} ${loading ? 'loading' : ''}`} 
+          onClick={handleLike}
+        >
+          <Heart 
+            size={20} 
+            fill={isLiked ? "#ef4444" : "none"} 
+            color={isLiked ? "#ef4444" : "currentColor"} 
+            style={{ transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}
+          />
+          <span>{likes}</span>
+        </button>
+
+        <div className="view-badge-minimal">
+          <Eye size={18} color="#888" />
+          <span>{views.toLocaleString('vi-VN')} LƯỢT XEM</span>
+        </div>
+      </div>
 
       <button className="share-btn-minimal" onClick={handleShare}>
         <Share2 size={18} />
@@ -137,11 +155,26 @@ export default function PostInteractions({ postId, initialLikes, postTitle }: Po
         .post-interactions-row {
           display: flex;
           align-items: center;
+          justify-content: space-between;
           gap: 1.5rem;
           margin: 5rem 0;
           padding: 2.5rem 0;
           border-top: 1px solid #f0f0f0;
           border-bottom: 1px solid #f0f0f0;
+        }
+        .interaction-left-group {
+          display: flex;
+          align-items: center;
+          gap: 2rem;
+        }
+        .view-badge-minimal {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+          font-size: 0.7rem;
+          font-weight: 800;
+          color: #888;
+          letter-spacing: 0.05em;
         }
         .like-btn, .share-btn-minimal {
           display: flex;

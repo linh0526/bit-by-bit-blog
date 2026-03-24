@@ -10,25 +10,35 @@ interface BlogStatsProps {
 export default function BlogStats({ initialViews, postSlug }: BlogStatsProps) {
   const [views, setViews] = useState(initialViews || 0);
 
+  // Sync state with props when page changes
+  useEffect(() => {
+    if (initialViews !== undefined) {
+      setViews(initialViews);
+    }
+  }, [initialViews]);
+
   useEffect(() => {
     const handleStats = async () => {
       // 1. Check if user already counted in this session
-      const hasViewed = document.cookie.split('; ').some((item) => item.trim().startsWith('bitbybit_v=1'));
+      // Unique cookie for each post if postSlug exists, or global for site
+      const cookieName = postSlug ? `bitbybit_v_${postSlug}` : 'bitbybit_v_global';
+      const hasViewed = document.cookie.split('; ').some((item) => item.trim().startsWith(`${cookieName}=1`));
       
       if (!hasViewed) {
-        const { incrementView } = await import("../../lib/actions");
-        await incrementView(postSlug);
+        try {
+          const { incrementView } = await import("../../lib/actions");
+          await incrementView(postSlug);
 
-        // Set cookie (30 mins)
-        const d = new Date();
-        d.setTime(d.getTime() + (30 * 60 * 1000)); 
-        document.cookie = `bitbybit_v=1; expires=${d.toUTCString()}; path=/`;
-        
-        setViews(prev => prev + 1);
+          // Set cookie (30 mins)
+          const d = new Date();
+          d.setTime(d.getTime() + (30 * 60 * 1000)); 
+          document.cookie = `${cookieName}=1; expires=${d.toUTCString()}; path=/`;
+          
+          setViews(prev => prev + 1);
+        } catch (err) {
+          console.error("Error incrementing views:", err);
+        }
       }
-
-      // Fetch dynamic total for visual accuracy if needed, 
-      // but for premium feel we can just use the incremented state
     };
 
     handleStats();

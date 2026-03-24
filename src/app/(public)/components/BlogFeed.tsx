@@ -6,7 +6,7 @@ import { Heart, Share2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function BlogFeed({ initialPosts, filterTag, searchQuery }: { initialPosts: any[], filterTag?: string, searchQuery?: string }) {
+export default function BlogFeed({ initialPosts, filterTag, searchQuery, supabaseUrl }: { initialPosts: any[], filterTag?: string, searchQuery?: string, supabaseUrl?: string }) {
   const [posts, setPosts] = useState(initialPosts.filter(p => p.priority >= 0 && !p.category?.includes('[HIDDEN]') && !p.tags?.some((t: string) => t.includes('[HIDDEN]'))));
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -30,12 +30,12 @@ export default function BlogFeed({ initialPosts, filterTag, searchQuery }: { ini
 
     let query = supabase
       .from('posts')
-      .select('*')
+      .select('id, title, slug, excerpt, created_at, category, image_url, views_count, likes_count, image_alt, priority, tags')
       .not('category', 'ilike', '[HIDDEN]%')
       .gte('priority', 0);
 
     if (searchQuery) {
-      query = query.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
+      query = query.or(`title.ilike.%${searchQuery}%,excerpt.ilike.%${searchQuery}%`);
     }
 
     if (filterTag) {
@@ -83,32 +83,10 @@ export default function BlogFeed({ initialPosts, filterTag, searchQuery }: { ini
       .replace(/\s+/g, '-')
       .replace(/[^\w-]/g, '') || '';
 
-  const renderContent = (content: string) => {
-    // Show first 4 paragraphs or so
-    const paragraphs = (content || "").split(/\n+/).filter(p => p.trim());
-    const snippetCount = paragraphs.length > 5 ? 5 : paragraphs.length;
-    const snippet = paragraphs.slice(0, snippetCount).join('\n\n');
-    
-    return snippet
-      .replace(/^##\s+(.*)/gm, (_: any, title: string) => `<h2>${title}</h2>`)
-      .replace(/^###\s+(.*)/gm, (_: any, title: string) => `<h3>${title}</h3>`)
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/!\[(.*?)\]\((.*?)\)/g, '') // Hide images in feed snippet
-      .replace(/\[center\]([\s\S]*?)\[\/center\]/g, '<div style="text-align: center;">$1</div>')
-      .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="content-link">$1</a>')
-      .split(/\n+/)
-      .map(para => {
-        if (para.startsWith('<h') || para.startsWith('<li') || para.startsWith('<div')) return para;
-        return `<p>${para}</p>`;
-      })
-      .join('');
-  };
-
   return (
     <div className="blog-feed">
       {posts.map((post) => (
-        <article key={post.id} className="feed-post-item animate-in">
+        <article key={post.id} className={`feed-post-item ${posts.indexOf(post) < 2 ? "" : "animate-in"}`}>
           <header className="feed-post-header">
             <div className="meta-overline">
               <span className="cat-chip">{post.category}</span>
@@ -128,8 +106,8 @@ export default function BlogFeed({ initialPosts, filterTag, searchQuery }: { ini
                 <Link href={`/tag/${tag}`} key={tag} className="tag-link-mini">#{tag}</Link>
               ))}
             </div>
-            <h2 className="feed-post-title" style={post.title.includes('[center]') ? {textAlign: 'center'} : {}}>
-              <Link href={`/${post.slug}`}>{post.title.replace(/\[\/?center\]/g, '')}</Link>
+            <h2 className="feed-post-title" style={post.title?.includes('[center]') ? {textAlign: 'center'} : {}}>
+              <Link href={`/${post.slug}`}>{post.title?.replace(/\[\/?center\]/g, '')}</Link>
             </h2>
           </header>
 
@@ -138,18 +116,19 @@ export default function BlogFeed({ initialPosts, filterTag, searchQuery }: { ini
               <Link href={`/${post.slug}`}>
                 <Image 
                   src={post.image_url} 
-                  alt={post.title} 
+                  alt={post.image_alt || post.title} 
                   fill
                   className="featured-img"
                   sizes="(max-width: 1100px) 100vw, 800px"
-                  priority={posts.indexOf(post) < 2}
+                  priority={posts.indexOf(post) === 0}
+                  {...(posts.indexOf(post) === 0 ? { fetchPriority: "high" } : {})}
                 />
               </Link>
             </div>
           )}
 
           <div className="feed-post-body markdown-body font-lora">
-            <div dangerouslySetInnerHTML={{ __html: renderContent(post.content) }} />
+            <p>{post.excerpt}</p>
             <div className="read-more-gradient-box">
                <Link href={`/${post.slug}`} className="continue-reading-btn">TIẾP TỤC ĐỌC →</Link>
             </div>
@@ -182,7 +161,7 @@ export default function BlogFeed({ initialPosts, filterTag, searchQuery }: { ini
         .featured-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s; }
         .feed-post-featured-image:hover .featured-img { transform: scale(1.03); }
 
-        .font-lora { font-family: 'Lora', serif; }
+        .font-lora { font-family: var(--font-serif); }
         .markdown-body { font-size: 1.25rem; line-height: 1.8; color: #333; position: relative; max-height: 400px; overflow: hidden; }
         .read-more-gradient-box {
            position: absolute;

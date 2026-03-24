@@ -153,11 +153,6 @@ export default function Sidebar({ latestPosts, topPosts, supabaseUrl, isAboutPag
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        .sidebar-column-white-scroll {
-          background-color: #ffffff;
-          padding: 3rem 1.5rem;
-          border-left: 1px solid #f0f0f0;
-        }
         .tag-cloud-container { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: baseline; }
         .tag-cloud-link { color: #888; text-decoration: none; font-weight: 800; transition: all 0.2s; letter-spacing: 0.02em; }
         .tag-cloud-link:hover { color: #9333ea; transform: translateY(-2px); }
