@@ -78,8 +78,9 @@ export default function PostInteractions({ postId, initialLikes, postTitle }: Po
           const newLikes = Math.max(0, likes - 1);
           setLikes(newLikes);
           setIsLiked(false);
-          // Try to update denormalized count (best effort)
-          await supabase.from('posts').update({ likes_count: newLikes }).eq('id', postId);
+          // Sync with DB via Server Action
+          const { syncPostLikes } = await import("../../lib/actions");
+          await syncPostLikes(postId);
         }
       } else {
         // Like: Insert into post_likes
@@ -91,8 +92,9 @@ export default function PostInteractions({ postId, initialLikes, postTitle }: Po
           const newLikes = likes + 1;
           setLikes(newLikes);
           setIsLiked(true);
-          // Try to update denormalized count (best effort)
-          await supabase.from('posts').update({ likes_count: newLikes }).eq('id', postId);
+          // Sync with DB via Server Action
+          const { syncPostLikes } = await import("../../lib/actions");
+          await syncPostLikes(postId);
         }
       }
     } catch (err) {

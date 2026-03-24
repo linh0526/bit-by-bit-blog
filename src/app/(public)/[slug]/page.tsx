@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const title = post.seo_title || post.title;
   const description = post.seo_description || post.excerpt;
-  const imageUrl = post.seo_og_image || post.image_url;
+  const imageUrl = post.seo_og_image || post.image_url || "https://feyzwofpwuutgbuglaqi.supabase.co/storage/v1/object/public/blog-images/default-og.png";
 
   return {
     title: `${title.replace(/\[\/?center\]/g, '')} | Bit by Bit`,
@@ -31,14 +31,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     openGraph: {
       title: title.replace(/\[\/?center\]/g, ''),
       description: (description || '').replace(/\[\/?center\]/g, ''),
-      images: imageUrl ? [imageUrl] : [],
+      images: [imageUrl],
       type: 'article',
     },
     twitter: {
       card: 'summary_large_image',
       title: title.replace(/\[\/?center\]/g, ''),
       description: (description || '').replace(/\[\/?center\]/g, ''),
-      images: imageUrl ? [imageUrl] : [],
+      images: [imageUrl],
     },
   };
 }

@@ -15,16 +15,9 @@ export default function BlogStats({ initialViews, postSlug }: BlogStatsProps) {
       // 1. Check if user already counted in this session
       const hasViewed = document.cookie.split('; ').some((item) => item.trim().startsWith('bitbybit_v=1'));
       
-      const supabase = createClient();
-
       if (!hasViewed) {
-        // Increment global views
-        await supabase.rpc('increment_total_views');
-        
-        // Increment post views if on a post page
-        if (postSlug) {
-          await supabase.rpc('increment_post_views', { p_slug: postSlug });
-        }
+        const { incrementView } = await import("../../lib/actions");
+        await incrementView(postSlug);
 
         // Set cookie (30 mins)
         const d = new Date();

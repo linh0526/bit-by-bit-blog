@@ -251,3 +251,57 @@ export async function toggleTagVisibility(tag: string, isHidden: boolean) {
   const newTag = isHidden ? cleanTag : `[HIDDEN] ${cleanTag}`;
   return renameTag(tag, newTag);
 }
+
+export async function incrementView(slug?: string) {
+  const supabase = createAdminClient()
+  
+  if (slug) {
+    // 1. Try RPC increment_post_views (atomic, efficient)
+    const { error: rpcError } = await supabase.rpc('increment_post_views', { p_slug: slug });
+    
+    if (rpcError) {
+      console.warn(`SERVER: RPC increment_post_views failed for ${slug}, trying direct update:`, rpcError);
+      // Fallback: direct update
+      const { data: post } = await supabase.from('posts').select('view_count').eq('slug', slug).single();
+      if (post) {
+        await supabase.from('posts').update({ view_count: (post.view_count || 0) + 1 }).eq('slug', slug);
+      }
+    }
+  }
+
+  // 2. Increment global total views
+  const { error: globalRpcError } = await supabase.rpc('increment_total_views');
+  if (globalRpcError) {
+    console.warn('SERVER: RPC increment_total_views failed, trying direct update:', globalRpcError);
+    const { data: stats } = await supabase.from('site_stats').select('value').eq('key', 'total_views').single();
+    if (stats) {
+      await supabase.from('site_stats').update({ value: (stats.value || 0) + 1 }).eq('key', 'total_views');
+    }
+  }
+  
+  revalidatePath('/')
+  revalidatePath(`/${slug}`)
+}
+
+export async function syncPostLikes(postId: string) {
+  const supabase = createAdminClient()
+  
+  // Get exact count from post_likes table
+  const { count, error: countError } = await supabase
+    .from('post_likes')
+    .select('*', { count: 'exact', head: true })
+    .eq('post_id', postId);
+
+  if (countError) return { success: false, error: countError.message };
+
+  // Update denormalized count in posts table
+  const { error: updateError } = await supabase
+    .from('posts')
+    .update({ likes_count: count || 0 })
+    .eq('id', postId);
+
+  if (updateError) return { success: false, error: updateError.message };
+
+  revalidatePath('/')
+  return { success: true, count };
+}
